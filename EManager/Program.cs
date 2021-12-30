@@ -1,20 +1,27 @@
+using EManager;
 using Microsoft.AspNetCore.Http.Json;
 using Newtonsoft.Json.Serialization;
-using System.Text.Json;
 using System.Text.Json.Serialization;
+//using System.Text.Json;
+//using System.Text.Json.Serialization;
+
+using Newtonsoft.Json;
+using System.Web.Http;
 
 var builder = WebApplication.CreateBuilder(args);
-//Json serializer
-builder.Services.Configure<JsonOptions>(options =>
-{
-    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-    options.SerializerOptions.WriteIndented = true;
-    options.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
-});
-// Add services to the container.
+builder.Services.AddMvc().AddNewtonsoftJson();
+builder.Services.AddControllers().AddNewtonsoftJson();
+builder.Services.AddControllersWithViews().AddNewtonsoftJson();
+builder.Services.AddRazorPages().AddNewtonsoftJson();
 
-builder.Services.AddControllers();
+
+//builder.Services.AddControllers().AddJsonOptions(options =>
+//{
+//    options.JsonSerializerOptions.WriteIndented = true;
+//    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+//    options.JsonSerializerOptions.Converters.Add(new CustomJsonConverterForType());
+//});
+
 
 //enable cors
 builder.Services.AddCors(c =>
