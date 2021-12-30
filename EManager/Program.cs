@@ -1,9 +1,4 @@
-using EManager;
-using Microsoft.AspNetCore.Http.Json;
-using Newtonsoft.Json.Serialization;
-using System.Text.Json.Serialization;
-using Newtonsoft.Json;
-using System.Web.Http;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +30,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "Photos")),
+    RequestPath = "/Photos"
+
+});
 
 app.UseAuthorization();
 
