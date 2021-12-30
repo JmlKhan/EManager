@@ -2,26 +2,16 @@ using EManager;
 using Microsoft.AspNetCore.Http.Json;
 using Newtonsoft.Json.Serialization;
 using System.Text.Json.Serialization;
-//using System.Text.Json;
-//using System.Text.Json.Serialization;
-
 using Newtonsoft.Json;
 using System.Web.Http;
 
 var builder = WebApplication.CreateBuilder(args);
+
+//serialization
 builder.Services.AddMvc().AddNewtonsoftJson();
 builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddControllersWithViews().AddNewtonsoftJson();
 builder.Services.AddRazorPages().AddNewtonsoftJson();
-
-
-//builder.Services.AddControllers().AddJsonOptions(options =>
-//{
-//    options.JsonSerializerOptions.WriteIndented = true;
-//    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-//    options.JsonSerializerOptions.Converters.Add(new CustomJsonConverterForType());
-//});
-
 
 //enable cors
 builder.Services.AddCors(c =>
