@@ -1,6 +1,7 @@
 ﻿using EManager.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -10,121 +11,86 @@ namespace EManager.Controllers
     [ApiController]
     public class DepartmentController : ControllerBase
     {
-        private readonly IConfiguration _configuration;
+        private readonly EmanDbContext _context;
 
-        public DepartmentController(IConfiguration configuration)
+        public DepartmentController(EmanDbContext context)
         {
-            _configuration = configuration;
+            _context = context;
         }
 
         [HttpGet]
-        public JsonResult Get()
+        public async Task<ActionResult<IEnumerable<Department>>> Get()
         {
-            string query = @"
-                            select DepartmentId, DepartmentName from 
-                            dbo.Department 
-                            ";
-            DataTable table = new DataTable();
-            string sqlDataSource = _configuration.GetConnectionString("EManagerCon");
-            SqlDataReader myReader;
-
-            using(SqlConnection myCon = new SqlConnection(sqlDataSource))
+            try
             {
-                myCon.Open();
-                using(SqlCommand myCommand = new SqlCommand(query, myCon))
-                {
-                    myReader = myCommand.ExecuteReader();
-                    table.Load(myReader);
-                    myReader.Close();
-                    myCon.Close();
-                }
+                var departments = await _context.Departments.ToListAsync();
+                return Ok(departments);
             }
+            catch (Exception ex)
+            {
 
-            return new JsonResult(table);
+                return BadRequest(ex.Message);
+            }
+            
         }
         
         [HttpPost]
-        public JsonResult Post(Department dep)
+        public async Task<ActionResult<Department>> Post([FromBody] Department dep)
         {
-            string query = @"
-                            insert into dbo.Department 
-                            values (@DepartmentName) 
-                            ";
-            DataTable table = new DataTable();
-            string sqlDataSource = _configuration.GetConnectionString("EManagerCon");
-            SqlDataReader myReader;
-
-            using (SqlConnection myCon = new SqlConnection(sqlDataSource))
+            try
             {
-                myCon.Open();
-                using (SqlCommand myCommand = new SqlCommand(query, myCon))
+                _context.Departments.Add(dep);
+                await _context.SaveChangesAsync();
+                return Created("created successfully", new
                 {
-                    myCommand.Parameters.AddWithValue("@DepartmentName", dep.DepartmentName);
-                    myReader = myCommand.ExecuteReader();
-                    table.Load(myReader);
-                    myReader.Close();
-                    myCon.Close();
-                }
+                    DepartmentId = dep.DepartmentId,    
+                });
             }
+            catch (Exception ex)
+            {
 
-            return new JsonResult("added successfully");
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPatch("{id:int}")]
-        public JsonResult Patch(int id, Department dep)
+        public async Task<ActionResult<Department>> Edit(int id, [FromBody]Department dep)
         {
-            
-            string query = @"
-                            update dbo.Department 
-                            set DepartmentName = @DepartmentName
-                            where DepartmentId = @DepartmentId
-                            ";
-            DataTable table = new DataTable();
-            string sqlDataSource = _configuration.GetConnectionString("EManagerCon");
-            SqlDataReader myReader;
-
-            using (SqlConnection myCon = new SqlConnection(sqlDataSource))
+            if(id != dep.DepartmentId)
             {
-                myCon.Open();
-                using (SqlCommand myCommand = new SqlCommand(query, myCon))
-                {
-                    myCommand.Parameters.AddWithValue("@DepartmentId", id);
-                    myCommand.Parameters.AddWithValue("@DepartmentName", dep.DepartmentName);
-                    myReader = myCommand.ExecuteReader();
-                    table.Load(myReader);
-                    myReader.Close();
-                    myCon.Close();
-                }
+                return BadRequest("Id not found!!!");
+            }            
+
+            _context.Entry(dep).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok("Updated successfully");
+            }
+            catch (Exception ex)
+            {
+
+                return BadRequest($"something went wrong: {ex}");
             }
 
-            return new JsonResult("updated successfully");
+        
         }
 
         [HttpDelete("{id:int}")]
-        public JsonResult Delete(int id)
+        public async Task<ActionResult<Department>> Delete(int id)
         {
-            string query = @"
-                            delete from dbo.Department
-                            where DepartmentId = @DepartmentId
-                            ";
-            DataTable table = new DataTable();
-            string sqlDataSource = _configuration.GetConnectionString("EManagerCon");
-            SqlDataReader myReader;
+            var department = await _context.Departments.FindAsync(id);
 
-            using (SqlConnection myCon = new SqlConnection(sqlDataSource))
+            if(department == null)
             {
-                myCon.Open();
-                using (SqlCommand myCommand = new SqlCommand(query, myCon))
-                {
-                    myCommand.Parameters.AddWithValue("@DepartmentId", id);
-                    myReader = myCommand.ExecuteReader();
-                    table.Load(myReader);
-                    myReader.Close();
-                    myCon.Close();
-                }
+                return NotFound();
             }
 
-            return new JsonResult("deleted successfully");
+            _context.Departments.Remove(department);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }

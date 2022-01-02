@@ -1,4 +1,6 @@
+using EManager.Model;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +9,13 @@ builder.Services.AddMvc().AddNewtonsoftJson();
 builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddControllersWithViews().AddNewtonsoftJson();
 builder.Services.AddRazorPages().AddNewtonsoftJson();
+
+var connectionString = builder.Configuration.GetConnectionString("EManagerConProd");
+
+builder.Services.AddDbContext<EmanDbContext>(op =>
+{
+    op.UseSqlServer(connectionString);
+});
 
 //enable cors
 builder.Services.AddCors(c =>
