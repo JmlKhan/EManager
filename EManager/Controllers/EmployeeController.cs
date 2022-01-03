@@ -1,5 +1,6 @@
 ﻿using EManager.Model;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Data.SqlClient;
 
@@ -9,135 +10,83 @@ namespace EManager.Controllers
     [ApiController]
     public class EmployeeController : ControllerBase
     {
-            private readonly IConfiguration _configuration;
-            private readonly IWebHostEnvironment _env;
+        private readonly EmanDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-            public EmployeeController(IConfiguration configuration, IWebHostEnvironment env)
+            public EmployeeController(EmanDbContext context, IWebHostEnvironment env)
             {
-                _configuration = configuration;
+                _context= context;
                 _env = env;
             }
 
             [HttpGet]
-            public JsonResult Get()
+            public async Task<ActionResult<IEnumerable<Employee>>> Get()
             {
-                string query = @"
-                            select EmployeeId, EmployeeName,Department,
-                            convert(varchar(10), DateOfJoining,120) as DateofJoining, PhotoFileName
-                            from
-                            dbo.Employee 
-                            ";
-                DataTable table = new DataTable();
-                string sqlDataSource = _configuration.GetConnectionString("EManagerCon");
-                SqlDataReader myReader;
-
-                using (SqlConnection myCon = new SqlConnection(sqlDataSource))
+                try
                 {
-                    myCon.Open();
-                    using (SqlCommand myCommand = new SqlCommand(query, myCon))
-                    {
-                        myReader = myCommand.ExecuteReader();
-                        table.Load(myReader);
-                        myReader.Close();
-                        myCon.Close();
-                    }
+                    var employees = await _context.Employees.ToListAsync();
+                    return Ok(employees);
                 }
-
-                return new JsonResult(table);
+                catch (Exception ex)
+                {
+                    return BadRequest(ex.Message);
+                }
             }
 
             [HttpPost]
-            public JsonResult Post(Employee emp)
+            public async Task<ActionResult<Employee>> Post([FromBody] Employee employee)
             {
-                string query = @"
-                            insert into dbo.Employee
-                            (EmployeeName,Department, DateOfJoining,PhotoFileName)
-                            values (@EmployeeName, @Department, @DateOfJoining, @PhotoFileName) 
-                            ";
-                DataTable table = new DataTable();
-                string sqlDataSource = _configuration.GetConnectionString("EManagerCon");
-                SqlDataReader myReader;
+                 try
+                 {
+                    _context.Employees.Add(employee);
+                    await _context.SaveChangesAsync();
+                    return Ok();
+                 }
+                 catch (Exception ex)
+                 {
 
-                using (SqlConnection myCon = new SqlConnection(sqlDataSource))
-                {
-                    myCon.Open();
-                    using (SqlCommand myCommand = new SqlCommand(query, myCon))
-                    {
-                        myCommand.Parameters.AddWithValue("@EmployeeName", emp.EmployeeName);
-                        myCommand.Parameters.AddWithValue("@Department", emp.Department);
-                        myCommand.Parameters.AddWithValue("@DateOfJoining", emp.DateOfJoining);
-                        myCommand.Parameters.AddWithValue("@PhotoFileName", emp.PhotoFileName);
-                        myReader = myCommand.ExecuteReader();
-                        table.Load(myReader);
-                        myReader.Close();
-                        myCon.Close();
-                    }
-                }
-
-                return new JsonResult("added successfully");
+                    return BadRequest(ex.Message);
+                 }
+               
             }
 
             [HttpPatch("{id:int}")]
-            public JsonResult Patch(int id, Employee emp)
+            public async Task<ActionResult<Employee>> Edit(int id, [FromBody] Employee employee)
             {
-
-                string query = @"
-                            update dbo.Employee 
-                            set EmployeeName = @EmployeeName,
-                            Department = @Department, 
-                            DateOfJoining = @DateOfJoining,
-                            PhotoFileName = @PhotoFileName
-                            where EmployeeId = @EmployeeId
-                            ";
-                DataTable table = new DataTable();
-                string sqlDataSource = _configuration.GetConnectionString("EManagerCon");
-                SqlDataReader myReader;
-
-                using (SqlConnection myCon = new SqlConnection(sqlDataSource))
+                if(id != employee.EmployeeId)
                 {
-                    myCon.Open();
-                    using (SqlCommand myCommand = new SqlCommand(query, myCon))
-                    {
-                        myCommand.Parameters.AddWithValue("@EmployeeId", id);
-                        myCommand.Parameters.AddWithValue("@EmployeeName", emp.EmployeeName);
-                        myCommand.Parameters.AddWithValue("@Department", emp.Department);
-                        myCommand.Parameters.AddWithValue("@DateOfJoining", emp.DateOfJoining);
-                        myCommand.Parameters.AddWithValue("@PhotoFileName", emp.PhotoFileName);
-                        myReader = myCommand.ExecuteReader();
-                        table.Load(myReader);
-                        myReader.Close();
-                        myCon.Close();
-                    }
+                    return BadRequest("Id not found");
                 }
 
-                return new JsonResult("updated successfully");
+                _context.Entry(employee).State = EntityState.Modified;
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                    return Ok("updated sucessfully");
+                }
+                catch (Exception ex)
+                {
+
+                    return BadRequest(ex.Message);
+                }
+
             }
 
             [HttpDelete("{id:int}")]
-            public JsonResult Delete(int id)
+            public async Task<ActionResult<Employee>> Delete(int id)
             {
-                string query = @"
-                            delete from dbo.Employee
-                            where EmployeeId = @EmployeeId
-                            ";
-                DataTable table = new DataTable();
-                string sqlDataSource = _configuration.GetConnectionString("EManagerCon");
-                SqlDataReader myReader;
-
-                using (SqlConnection myCon = new SqlConnection(sqlDataSource))
+                var employee = await _context.Employees.FindAsync(id);
+                
+                if(employee == null)
                 {
-                    myCon.Open();
-                    using (SqlCommand myCommand = new SqlCommand(query, myCon))
-                    {
-                        myCommand.Parameters.AddWithValue("@EmployeeId", id);
-                        myReader = myCommand.ExecuteReader();
-                        table.Load(myReader);
-                        myReader.Close();
-                        myCon.Close();
-                    }
+                    return NotFound();
                 }
 
-                return new JsonResult("deleted successfully");
+                _context.Employees.Remove(employee);
+                await _context.SaveChangesAsync();
+                
+                return NoContent();               
             }
 
             [Route("SaveFile")]
